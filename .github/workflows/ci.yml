@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Calidad y pruebas
+    runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SECRET_KEY: clave-ficticia-solo-para-pruebas-ci
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+
+      - name: Instalar Python
+        run: uv python install
+
+      - name: Instalar dependencias bloqueadas
+        run: uv sync --locked
+
+      - name: Revisar código Python
+        run: uv run --locked ruff check .
+
+      - name: Comprobar formato
+        run: uv run --locked ruff format --check .
+
+      - name: Comprobar configuración Django
+        run: uv run --locked python manage.py check
+
+      - name: Comprobar migraciones pendientes
+        run: uv run --locked python manage.py makemigrations --check --dry-run
+
+      - name: Ejecutar pruebas
+        run: uv run --locked python manage.py test
